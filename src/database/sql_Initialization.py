@@ -31,9 +31,6 @@ class SQLInitializer:
     def initialize_database_connection():
         load_dotenv()
 
-        print(f'user: {os.environ.get("ADMIN_USER")}')
-        print(f'password: {os.environ.get("ADMIN_PASSWORD")}')
-
         db = mysql.connector.connect(
             host="localhost",
             user=os.environ.get("ADMIN_USER"),
