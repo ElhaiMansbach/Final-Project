@@ -1,6 +1,6 @@
 import sys
 
-sys.path.append("../..")
+sys.path.append("../")
 import json
 import logging
 import os
@@ -9,10 +9,10 @@ from datetime import date, datetime, timedelta
 import mysql.connector
 from dotenv import load_dotenv
 
-from src.database.abstract_Database import Abstract_Database
-from src.server.node import Node
-from src.server.tree import Tree
-from src.server.user import User
+from database.abstract_Database import Abstract_Database
+from node import Node
+from tree import Tree
+from user import User
 
 
 class SQL_database(Abstract_Database):
@@ -195,7 +195,7 @@ class SQL_database(Abstract_Database):
     @staticmethod
     def create_config() -> dict:
         load_dotenv()
-        
+
         configuration = {
             "host": "localhost",
             "user": os.environ.get("ADMIN_USER"),
@@ -234,9 +234,9 @@ class SQL_database(Abstract_Database):
 
         return False
 
-    def is_mail_exists(self, mail:str) -> bool:
+    def is_mail_exists(self, mail: str) -> bool:
         query = f"""SELECT mail FROM USERS WHERE mail='{mail}' """
-        
+
         try:
             self.cursor.execute(query)
 
@@ -245,7 +245,6 @@ class SQL_database(Abstract_Database):
 
         result = self.cursor.fetchone()
         if result is not None:
-            
             return True
 
         return False
@@ -381,24 +380,6 @@ class SQL_database(Abstract_Database):
         )
 
         try:
-            """
-            TODO: the code below is another approach to store the data by break down the dictionary
-            into multiple rows and store each level in a separate column in the database table.
-            I first want to try the basic approach, and then the more complex.
-            """
-
-            # for level1, level1_dict in vote['votes'][0].items():
-            #     for level2, level2_dict in level1_dict.items():
-            #         for section, section_dict in level2_dict.items():
-            #             for domain, domain_dict in section_dict.items():
-            #                 for program, program_dict in domain_dict.items():
-            #                     for regulation, regulation_dict in program_dict.items():
-            #                         for category, category_dict in regulation_dict.items():
-            #                             total = category_dict['total']
-            #                             query = f'''INSERT INTO votes (user_id, level_1, level_2, section, domain, program, regulation, category, total)
-            #                             VALUES ({user_id}, '{level1}', '{level2}', '{section}', '{domain}', '{program}', '{regulation}', '{category}', {total})'''
-            #                             self.cursor.execute(query)
-
             # execute the query and commit the changes to the database
             self.cursor.execute(query)
             self.db.commit()
@@ -530,14 +511,13 @@ class SQL_database(Abstract_Database):
 
         return result[0][0]
 
-    def get_user_details(self,user_id: int) -> dict:
-        
+    def get_user_details(self, user_id: int) -> dict:
         query = f"SELECT * FROM USERS WHERE user_id={user_id}"
-        
+
         try:
             self.cursor.execute(query)
             result = self.cursor.fetchall()
-            
+
             if not result:
                 return "There is no registered user with this ID"
 
@@ -548,17 +528,17 @@ class SQL_database(Abstract_Database):
             return "Faild"
 
         return result[0]
-    
-    
+
     def save_new_password(self, user_id: int, new_password: str) -> bool:
-        
-        query = f"UPDATE USERS SET password = {new_password} WHERE user_id = '{user_id}'"
-        
+        query = (
+            f"UPDATE USERS SET password = {new_password} WHERE user_id = '{user_id}'"
+        )
+
         try:
             self.cursor.execute(query)
             self.db.commit()
 
         except:
             return False
-        
+
         return True

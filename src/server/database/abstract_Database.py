@@ -1,15 +1,15 @@
 import sys
 
-sys.path.append("../..")
+sys.path.append("../")
 from abc import ABC, abstractmethod
 
-from src.server.tree import Tree
-from src.server.user import User
+from tree import Tree
+from user import User
 
 
 class Abstract_Database(ABC):
 
-    """Abstruct class for handling data base"""
+    """Abstruct class for handling database"""
 
     @abstractmethod
     def connect(self):
@@ -98,12 +98,11 @@ class Abstract_Database(ABC):
     @abstractmethod
     def get_user_gender(self, user_id: int):
         pass
-    
+
     @abstractmethod
-    def get_user_details(self,user_id: int) -> dict:
+    def get_user_details(self, user_id: int) -> dict:
         pass
-    
+
     @abstractmethod
     def save_new_password(self, user_id: int, new_password: str) -> bool:
         pass
-    

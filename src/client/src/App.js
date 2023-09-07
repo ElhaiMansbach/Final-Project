@@ -1,5 +1,4 @@
 import { useState } from 'react';
-// routes
 import Router from './routes';
 // theme
 import ThemeProvider from './theme';
@@ -12,12 +11,15 @@ import AddressContext from './contexts/AddressContext';
 export default function App() {
   // Define a state variable 'id' and initialize it with the value of 'localStorage.getItem('id')' or an empty string if it's not available
   const [id, setId] = useState(localStorage.getItem('id') ?? '');
-  // const [address] = useState('http://157.230.22.122:5001/peoples_budget/');
-  const [address] = useState('http://localhost:5001/peoples_budget/');
+
+  const serverUrl = process.env.REACT_APP_SERVER_URL || 'http://localhost';
+  const serverPort = process.env.REACT_APP_SERVER_PORT || 5002;
+  const [address] = useState(`${serverUrl}:${serverPort}/peoples_budget/server/`);
 
   return (
     // Provide the 'id' value to the UserContext using UserContext.Provider
     <UserContext.Provider value={id}>
+      {/* Provide the 'address' to the AddressContext using AddressContext.Provider */}
       <AddressContext.Provider value={address}>
         {/* Wrap the entire app with ThemeProvider to apply a theme */}
         <ThemeProvider>

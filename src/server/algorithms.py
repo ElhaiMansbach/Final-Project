@@ -4,6 +4,7 @@ This file contains the algorithms that will be used in the project for calculati
 import concurrent.futures
 import logging
 import statistics
+
 import numpy as np
 from counter import Counter
 from tree import Tree
@@ -16,13 +17,6 @@ __all__ = [
     "convert_structure",
     "unite_votes",
 ]
-
-LOGֹ_FORMAT = "%(levelname)s, time: %(asctime)s , line: %(lineno)d- %(message)s "
-# Create and configure logger
-logging.basicConfig(filename="server_logging.log",
-                    level=logging.DEBUG, filemode="w")
-logger = logging.getLogger()
-
 
 def median_algorithm(votes: dict) -> dict:
     """
@@ -235,8 +229,7 @@ def update_dict_ids(counter: Counter, input_dict: dict, parent_id=None):
     num_children = len(children)
     for i in range(num_children):
         counter.current_id += 1
-        children[i] = update_dict_ids(
-            counter, children[i], parent_id=input_dict["id"])
+        children[i] = update_dict_ids(counter, children[i], parent_id=input_dict["id"])
         counter.current_id += len(children[i].get("children", []))
     input_dict["children"] = children
 
@@ -467,7 +460,7 @@ def _find_median_with_constant_functions(
     n: int,
     min_search: float = 0,
     max_search: float = 1,
-    max_iterations: int = 50,
+    max_iterations: int = 100,
 ) -> list[float]:
     """
     Find the median of a list of values by adding constant functions.
@@ -479,12 +472,11 @@ def _find_median_with_constant_functions(
         n (int): The number of leaves (projects).
         min_search (float, optional): The minimum value of the search range. Defaults to 0.
         max_search (float, optional): The maximum value of the search range. Defaults to 1.
-        max_iterations (int, optional): The maximum number of iterations. Defaults to 1000.
+        max_iterations (int, optional): The maximum number of iterations. Defaults to 100.
 
     Returns:
         constants list[float]: A list of all the constants values, or None if the maximum number of iterations is reached.
     """
-
     # calculate the midpoint of the search range
     t = (min_search + max_search) / 2
 
@@ -700,8 +692,7 @@ def _building_nested_dict(
     for key, value in votes.items():
         # if the current value is a nested dictionary, recursively call the function
         if isinstance(value, dict):
-            nested_result[key] = _building_nested_dict(
-                value, new_values, index, result)
+            nested_result[key] = _building_nested_dict(value, new_values, index, result)
         else:
             # if the current key is "total", leave empty
             if key == "total":

@@ -16,6 +16,18 @@
   <img src="https://i.ibb.co/CHx5btZ/cover-auto-x2-colored-toned-light-ai.jpg" width="600" title="hover text">
 </p>
 
+## Demo
+
+[![Demo Video](https://i.ibb.co/SX8yV3c/Screenshot-2023-09-05-at-23-11-06.png)](https://www.youtube.com/watch?v=2kalXcbpbh8)
+
+You can watch our project's demo video on YouTube to get a quick overview of how it works.
+
+## Website URL
+
+You can access the live website by clicking the link below:
+
+[People's Budget Website](https://budget.csariel.xyz/)
+
 ## Table of Contents
 
 - [Project Goal](#project-goal)
@@ -29,7 +41,12 @@
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
-     - [Environment Variable Configuration](#environment-variable-configuration)
+     - [Server Installation](#server-installation)
+        - [Environment Variable Configuration for the Server and Database](#environment-variable-configuration-for-the-server-and-database)
+        - [Database Initialization and Running the Server](#database-initialization-and-running-the-server)
+     - [Client Installation](#client-installation)
+        - [Environment Variable Configuration for the Client](#environment-variable-configuration-for-the-client)
+        - [Running the Client](#running-the-client)
 - [Testing](#testing)
 - [User Guide](#user-guide)
   - [Getting Started](#getting-started)
@@ -89,29 +106,38 @@ To run the People's Budget web application, you need to have the following insta
 
 ### Installation
 
-To set up the People's Budget web application locally, follow these steps:
+To set up the People's Budget application locally, follow the steps below for both the Client and Server components:
 
-1. Clone the repository: `git clone https://github.com/ElhaiMansbach/Final-Project`
-2. Navigate to the server directory: `cd Final-Project/src/server`
-3. Install the required Python dependencies: `pip install -r requirements.txt`
-4. Navigate to the client directory: `cd ../client`
-5. Install the required npm dependencies: `npm install`
-6. Install MySQL server and client packages: `sudo apt install mysql-server mysql-client`.
-7. Navigate to the database directory: `cd ../database`
-8. Set up the necessary environment variables.
+#### Server Installation
+1. Clone the repository: ```git clone https://github.com/ElhaiMansbach/Final-Project```
+2. Navigate to the server directory: ```cd Final-Project/src/server```
+3. Install the required Python dependencies: ```pip install -r requirements.txt```
+4. Set up the necessary environment variables.
 
-#### Environment Variable Configuration
+##### Environment Variable Configuration for the Server and Database
+1. Create an '.env' file: Use the '.env.example' file in the server directory as a template.
+```cp .env.example .env```
+2. Edit the '.env' file: Open the '.env' file you've just created and modify the values if necessary.
 
-To configure the required environment variables for the database:
-1. Create an '.env' file: Use the '.env.example' file in the database directory as a template. You can copy and rename it to '.env':
-`cp ../database/.env.example ../database/.env`
-2. Edit the '.env' file: Open the '.env' file you've just created and modify the values accordingly, if necessary.
+##### Database Initialization and Running the Server
+1. Install MySQL server and client packages: ```sudo apt install mysql-server mysql-client```
+2. To initialize the database, navigate to the database directory and run the command: ```python3 sql_Initialization.py```
+3. Navigate back to the server directory and start the server by running the command: ```python3 app.py```
 
-<br>9. To initialize the database, run the command: `python sql_Initialization.py`.
-<br>10. Start the server by navigating to the server directory and running the command: `python app.py`.
-<br>11. On a new terminal, start the client by navigating to the client directory and running the command: `npm start`.
-<br>12. Open the client-side application in your web browser: `http://localhost:5001`.
-<br>13. You're ready to actively participate in the budget voting process!
+#### Client Installation
+1. On a new terminal, navigate to the client directory: ```cd src/client```
+2. Install the required npm dependencies: ```npm install```
+3. Set up the necessary environment variables.
+
+##### Environment Variable Configuration for the Client
+1. Create an '.env' file: Use the '.env.example' file in the client directory as a template.
+```cp .env.example .env```
+2. Edit the '.env' file: Open the '.env' file you've just created and modify the values if necessary.
+
+##### Running the Client
+1. Start the client by running the command: ```npm start```
+2. The web browser will automatically initiate the client-side application.
+3. You're ready to actively participate in the budget voting process!
 
 ## Testing
 

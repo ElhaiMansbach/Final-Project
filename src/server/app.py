@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import sys
 
 sys.path.append("..")
@@ -15,32 +16,39 @@ from algorithms import (
     unite_votes,
     update_dict_ids,
 )
-from utilities_component import Utilities_component
 from calculator import Calculator
 from counter import Counter
+from dotenv import find_dotenv, load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from node import Node
-from tree import Tree
 from user import User
+from utilities_component import UtilitiesComponent
 from waitress import serve
 
-from database.abstract_Database import Abstract_Database
-from database.data_handler import data_handler
-from database.sql_database import SQL_database
+from server.database.data_handler import data_handler
+from server.database.sql_database import SQL_database
 
 sys.path.append("..")
+
+LOGֹ_FORMAT = "%(levelname)s, time: %(asctime)s , line: %(lineno)d- %(message)s "
+# Create and configure logger
+logging.basicConfig(filename="server_logging.log", level=logging.INFO, filemode="w")
+logger = logging.getLogger()
 
 app = Flask(__name__)
 CORS(app)
 
+# Initialize modules and variables
+load_dotenv(find_dotenv(".env"))
+port = os.environ.get("PORT", 5002)
+mode = os.environ.get("MODE", "DEV")
 
 # DB
 database = data_handler(SQL_database(SQL_database.create_config()))
 batch_database = data_handler(SQL_database(SQL_database.create_config()))
 
 # Logic side
-component = Utilities_component()
+component = UtilitiesComponent()
 
 # Batch calculate results
 algorithms_results = None
@@ -50,33 +58,37 @@ converted_current_budget = None
 current_budget_voting_page = None
 current_budget_login_page = None
 
-
 # Last vote
 last_voting_change = datetime.now()
 last_calculate_results_time = datetime.now()
 
 
-def calculte_results():
+def calculate_results():
     global last_calculate_results_time
     global algorithms_results
+    logger.info("calculate_results")
 
     while True:
         # Check if there is a new votes
         if last_calculate_results_time < last_voting_change:
+            logger.info("New vote received")
             batch_database.handler.connect()
             votes = batch_database.handler.load_user_votes()
 
             if not isinstance(votes, list):
-                return jsonify({"status": "Faild to load from DB"})
+                logger.error("Failed to load votes from the database")
+                return jsonify({"status": "Failed to load votes from the database"})
 
+            logger.info("Loaded user votes successfully from the database")
             voted_dict = unite_votes(votes)
 
             # Algo 1:
             median_algorithm_result: dict = median_algorithm(voted_dict)
+            logger.info("Got the median algorithm result")
 
             # Algo 2:
-            generalized_median_result: dict = generalized_median_algorithm(
-                voted_dict)
+            generalized_median_result: dict = generalized_median_algorithm(voted_dict)
+            logger.info("Got the generalized median algorithm result")
 
             # Get current budget
             global converted_current_budget
@@ -90,38 +102,56 @@ def calculte_results():
                 converted_current_budget = convert_structure(current_budget)
 
             last_calculate_results_time = datetime.now()
+            logger.info("Updated the results time")
             algorithms_results = {
-                "median_algorithm": json.dumps(median_algorithm_result, ensure_ascii=False),
-                "generalized_median_algorithm": json.dumps(generalized_median_result, ensure_ascii=False),
-                "current_budget": json.dumps(converted_current_budget, ensure_ascii=False),
+                "median_algorithm": json.dumps(
+                    median_algorithm_result, ensure_ascii=False
+                ),
+                "generalized_median_algorithm": json.dumps(
+                    generalized_median_result, ensure_ascii=False
+                ),
+                "current_budget": json.dumps(
+                    converted_current_budget, ensure_ascii=False
+                ),
                 "time": last_calculate_results_time,
             }
+
+            logger.info("Calculations and results updated")
 
         time.sleep(100)
 
 
+def start_background_thread():
+    global batch_thread
+    batch_thread = Thread(target=calculate_results)
+    batch_thread.daemon = True
+    batch_thread.start()
+
+
+# Routes
 #  -------------------------------- Login -----------------------------------------------------
 
-@app.route("/", methods=["GET"])
-def welcome():
-    return jsonify({"status": "Hello From Server :)"})
 
-@app.route("/peoples_budget/login", methods=["POST"])
+@app.route("/", methods=["GET"])
+def root():
+    return jsonify({"status": "Hello from people's Budget server!"})
+
+
+@app.route("/peoples_budget/server/login", methods=["POST"])
 def login():
     try:
         id = request.json["id"]
         password = request.json["password"]
 
     except:
-        logging.error("ERROR! : login args")
+        logger.error("ERROR! : login args")
         return jsonify({"status": "Faild"})
 
-    
     # Guest user
     if component.is_guest_user(id):
         return jsonify({"status": "Succeeded"})
 
-    result = component.check_if_user_exists(id,password)
+    result = component.check_if_user_exists(id, password)
 
     if result:
         return jsonify({"status": "Succeeded"})
@@ -129,7 +159,7 @@ def login():
     return jsonify({"status": "Faild"})
 
 
-@app.route("/peoples_budget/login", methods=["GET"])
+@app.route("/peoples_budget/server/login", methods=["GET"])
 def table_tree():
     global current_budget_login_page
 
@@ -142,7 +172,7 @@ def table_tree():
 # ------------------------------ Sign up -------------------------------------
 
 
-@app.route("/peoples_budget/sign_up", methods=["POST"])
+@app.route("/peoples_budget/server/sign_up", methods=["POST"])
 def signup():
     try:
         first_name = request.json["firstName"]
@@ -154,23 +184,24 @@ def signup():
         password = request.json["password"]
 
     except:
-        logging.error("ERROR! : sign_up args")
+        logger.error("ERROR! : sign_up args")
         return jsonify("ERROR! : sign_up args")
-
 
     database.handler.connect()
 
-    new_user:User = component.create_user(id, first_name, last_name, birth_date,
-                        email, password, gender, False)
-    
+    new_user: User = component.create_user(
+        id, first_name, last_name, birth_date, email, password, gender, False
+    )
+
     if new_user == None:
         return jsonify({"status": "Faild"})
-        
-    check_mail = component.is_mail_exists(new_user.get_mail())
-    
-    if check_mail:
-        return jsonify({"status": "The email already exists in the system - try another email"})
 
+    check_mail = component.is_mail_exists(new_user.get_mail())
+
+    if check_mail:
+        return jsonify(
+            {"status": "The email already exists in the system - try another email"}
+        )
 
     check_id = database.handler.user_id_exeisting(new_user)
     if check_id:
@@ -186,19 +217,21 @@ def signup():
 # --------------------------------- Forget Password ----------------------------------
 
 
-@app.route("/peoples_budget/forget_password", methods=["POST"])
+@app.route("/peoples_budget/server/forget_password", methods=["POST"])
 def forget_password():
-    
     try:
         request_data = request.get_json()
-        
+
     except:
-                logging.error("ERROR! : in forget_password args")
-                return jsonify({"status": "Faild"})
-            
-            
-    if 'firstName' in request_data and 'lastName' in request_data and 'birthDate' in request_data and 'id' in request_data:
-        
+        logger.error("ERROR! : in forget_password args")
+        return jsonify({"status": "Faild"})
+
+    if (
+        "firstName" in request_data
+        and "lastName" in request_data
+        and "birthDate" in request_data
+        and "id" in request_data
+    ):
         first_name = request_data["firstName"]
         last_name = request_data["lastName"]
         id = request_data["id"]
@@ -207,56 +240,51 @@ def forget_password():
         database.handler.connect()
 
         user_details = database.handler.get_user_details(id)
-        
+
         if type(user_details) != tuple:
             return jsonify({"status": "Faild"})
-        
-        
+
         # -- Verify user details --
         first_name_db = user_details[1]
         last_name_db = user_details[2]
         birth_date_db = str(user_details[3])
-        
+
         if first_name != first_name_db:
             return jsonify("Invalid first name")
-        
+
         if last_name != last_name_db:
             return jsonify("Invalid last name")
-        
+
         if birth_date != birth_date_db:
             return jsonify("Invalid birth date")
-            
-                
+
         return jsonify({"status": "Succeeded"})
-        
 
     #  -- Reset password --
-    elif 'newPassword' in request_data:
-        
+    elif "newPassword" in request_data:
         user_id = request_data["id"]
         new_password = request_data["newPassword"]
-        
-        is_saved = database.handler.save_new_password(user_id,new_password)
+
+        is_saved = database.handler.save_new_password(user_id, new_password)
 
         if is_saved:
             return jsonify({"status": "Succeeded"})
-        
+
         # if not saved successfully
         return jsonify({"status": "Faild"})
 
     else:
         # The request does not contain the appropriate details
         return "Invalid request"
-    
-    
 
-@app.route("/peoples_budget/forget_password", methods=["POST"])
+
+@app.route("/peoples_budget/server/forget_password", methods=["POST"])
 def newpassword():
     try:
         new_password = request.json["newPassword"]
 
     except:
-        logging.error("ERROR! : New password args")
+        logger.error("ERROR! : New password args")
         return jsonify({"status": "Faild"})
 
     # database.handler.connect()
@@ -267,7 +295,7 @@ def newpassword():
 # --------------------------------- Home ---------------------------------------------
 
 
-@app.route("/peoples_budget/home", methods=["GET"])
+@app.route("/peoples_budget/server/home", methods=["GET"])
 def home():
     try:
         id = request.args.get("user_id")
@@ -311,7 +339,7 @@ def home():
 # -------------------------------- Information ---------------------------------------
 
 
-@app.route("/peoples_budget/information", methods=["GET"])
+@app.route("/peoples_budget/server/information", methods=["GET"])
 def information():
     database.handler.connect()
     dictionary = database.handler.get_information()
@@ -327,7 +355,7 @@ def information():
 # ---------------------------------- Dashborad --------------------------------------------
 
 
-@app.route("/peoples_budget/dashboard", methods=["GET"])
+@app.route("/peoples_budget/server/dashboard", methods=["GET"])
 def dashboard():
     database.handler.connect()
 
@@ -341,7 +369,7 @@ def dashboard():
 # ------------------------------------ Voting -------------------------------------------
 
 
-@app.route("/peoples_budget/voting", methods=["GET"])
+@app.route("/peoples_budget/server/voting", methods=["GET"])
 def subjects_and_projects_tree():
     database.handler.connect()
     try:
@@ -359,8 +387,6 @@ def subjects_and_projects_tree():
 
             if user_vote == "ERROR!":
                 return jsonify({"status": "Faild to get old user_vote"})
-
-            logging.info(user_vote)
 
             return user_vote
 
@@ -381,7 +407,7 @@ def subjects_and_projects_tree():
     return current_budget_voting_page
 
 
-@app.route("/peoples_budget/voting", methods=["POST"])
+@app.route("/peoples_budget/server/voting", methods=["POST"])
 def voting_tree():
     try:
         database.handler.connect()
@@ -403,8 +429,7 @@ def voting_tree():
     global last_voting_change
 
     if check_result == "false":
-        result = database.handler.update_user_vote(
-            user_id=user_id, vote=vote_str)
+        result = database.handler.update_user_vote(user_id=user_id, vote=vote_str)
         if not result:
             return jsonify({"status": "Error!, voting does not saved"})
 
@@ -427,7 +452,6 @@ def voting_tree():
             {"status": "Error!, Voting permission has not been updated, vote not saved"}
         )
 
-    logging.info(vote_str)
     result = database.handler.store_vote(vote=str(vote_str), user_id=user_id)
 
     if not result:
@@ -444,23 +468,18 @@ def voting_tree():
 # --------------------------------- Results -------------------------------------------
 
 
-@app.route("/peoples_budget/results", methods=["GET"])
+@app.route("/peoples_budget/server/results", methods=["GET"])
 def get_algorithms_results():
     # global algorithms_results
     return jsonify(algorithms_results)
 
-
-# dev or prod
-mode = "PROD"
+start_background_thread() # Start the background thread
 
 if __name__ == "__main__":
+    print(f"Server started on port: {port}")
+    logger.info(f"Server started on port: {port} | mode: {mode}")
 
-    batch = Thread(target=calculte_results)
-    batch.daemon = True
-    batch.start()
-
-    if mode == "dev":
-        app.run(port=5001, debug=True)
-
+    if mode == "DEV":
+        app.run(port=port, debug=True)
     else:
-        serve(app, host="0.0.0.0", port=5001)
+        serve(app, host="0.0.0.0", port=port)
